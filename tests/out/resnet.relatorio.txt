@@ -1,0 +1,61 @@
+input: tests\resnet.pdf
+output: tests\out\resnet.epub
+seconds: 3.1
+lang: en
+title: Deep Residual Learning for Image Recognition
+author: 
+body_font_size: 10.0
+vector_figures: 10
+tables: 13
+header_footer_lines_removed: 12
+footnotes: 6
+dehyphenated: 156
+pages: 12
+chapters: 11
+paragraphs: 189
+headings: 22
+images: 10
+
+AVISOS:
+
+DES-HIFENIZAÇÕES INCERTAS (palavra unida não vista em outro lugar do livro — confira):
+  p.1: high-|level -> highlevel
+  p.1: non-|trivial -> nontrivial
+  p.2: computa-|tional -> computational
+  p.2: re-|trieval -> retrieval
+  p.2: effec-|tive -> effective
+  p.2: solv-|ing -> solving
+  p.2: subprob-|lems -> subproblems
+  p.2: com-|posed -> composed
+  p.2: addi-|tional -> additional
+  p.3: equiv-|alent -> equivalent
+  p.3: computa-|tional -> computational
+  p.3: dis-|cussion -> discussion
+  p.4: fully-|convolutional -> fullyconvolutional
+  p.4: de-|tailed -> detailed
+  p.5: compet-|itive -> competitive
+  p.6: dif-|ferences -> differences
+  p.7: en-|joy -> enjoy
+  p.7: compet-|itive -> competitive
+  p.7: demon-|strate -> demonstrate
+  p.7: con-|tinue -> continue
+  p.8: analy-|sis -> analysis
+  p.8: ba-|sic -> basic
+  p.8: magni-|tudes -> magnitudes
+  p.9: dependen-|cies -> dependencies
+  p.9: hier-|archies -> hierarchies
+  p.9: co-|adaptation -> coadaptation
+  p.9: hand-|written -> handwritten
+  p.9: Deeply-|supervised -> Deeplysupervised
+  p.9: Er-|han -> Erhan
+  p.10: experi-|mented -> experimented
+  p.10: com-|pute -> compute
+  p.10: cate-|gories -> categories
+  p.10: con-|tributed -> contributed
+  p.10: it-|erative -> iterative
+  p.10: con-|catenated -> concatenated
+  p.11: pro-|cessed -> processed
+  p.11: pre-|trained -> pretrained
+  p.12: Specifi-|cally -> Specifically
+  p.12: classi-|fier -> classifier
+  p.12: out-|performs -> outperforms

@@ -1,0 +1,27 @@
+
+body { margin: 0 4%; line-height: 1.45; text-align: justify; hyphens: auto; -webkit-hyphens: auto; widows: 2; orphans: 2; }
+p { margin: 0; text-indent: 1.3em; }
+h1 + p, h2 + p, h3 + p, h4 + p, figure + p, blockquote + p, ul + p, table + p, p.first, .titlepage p { text-indent: 0; }
+h1, h2, h3, h4 { text-align: left; hyphens: none; -webkit-hyphens: none; page-break-after: avoid; break-after: avoid; line-height: 1.25; }
+h1 { font-size: 1.6em; margin: 2.5em 0 1.2em; page-break-before: always; break-before: page; }
+h2 { font-size: 1.3em; margin: 1.6em 0 0.8em; }
+h3 { font-size: 1.12em; margin: 1.3em 0 0.6em; }
+h4 { font-size: 1em; margin: 1.2em 0 0.5em; font-style: italic; }
+section.titlepage h1, section.titlepage h2 { text-align: center; page-break-before: auto; }
+p.center { text-align: center; text-indent: 0; margin: 0.6em 0; }
+p.right { text-align: right; text-indent: 0; }
+blockquote { margin: 0.8em 1.5em; font-size: 0.95em; }
+blockquote p { text-indent: 0; margin-bottom: 0.3em; }
+figure { margin: 1em 0; text-align: center; page-break-inside: avoid; break-inside: avoid; }
+figure img { max-width: 100%; max-height: 90vh; }
+figcaption { font-size: 0.88em; font-style: italic; margin-top: 0.4em; text-align: center; }
+table { border-collapse: collapse; margin: 1em auto; font-size: 0.88em; }
+td, th { border: 1px solid #999; padding: 0.2em 0.4em; vertical-align: top; text-align: left; }
+ul { margin: 0.6em 0 0.6em 1.2em; padding-left: 0.6em; }
+li { margin: 0.15em 0; }
+a.noteref { text-decoration: none; }
+a.noteref sup { font-size: 0.7em; line-height: 0; }
+section.footnotes { margin-top: 2.5em; font-size: 0.85em; }
+section.footnotes hr { width: 30%; margin-left: 0; }
+aside.fn p { text-indent: 0; margin: 0.35em 0; }
+img.cover { width: 100%; }

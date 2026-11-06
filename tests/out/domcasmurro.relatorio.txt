@@ -1,0 +1,22 @@
+input: tests\domcasmurro.pdf
+output: tests\out\domcasmurro.epub
+seconds: 9.5
+lang: pt
+title: Dom Casmurro
+author: Machado de Assis
+body_font_size: 10.0
+scanned_as_image: 1
+vector_figures: 8
+header_footer_lines_removed: 187
+footnotes: 0
+dehyphenated: 645
+pages: 192
+chapters: 154
+paragraphs: 1459
+headings: 163
+images: 9
+
+AVISOS:
+  1 página(s) escaneada(s) incluída(s) como imagem — instale o Tesseract e use --ocr para extrair texto.
+
+DES-HIFENIZAÇÕES INCERTAS (palavra unida não vista em outro lugar do livro — confira):
