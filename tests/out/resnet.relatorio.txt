@@ -1,6 +1,6 @@
 input: tests\resnet.pdf
 output: tests\out\resnet.epub
-seconds: 3.1
+seconds: 3.4
 lang: en
 title: Deep Residual Learning for Image Recognition
 author: 
@@ -9,7 +9,8 @@ vector_figures: 10
 tables: 13
 header_footer_lines_removed: 12
 footnotes: 6
-dehyphenated: 156
+line_end_hyphen_rate_%: 17.29
+dehyphenated: 154
 pages: 12
 chapters: 11
 paragraphs: 189
@@ -18,7 +19,7 @@ images: 10
 
 AVISOS:
 
-DES-HIFENIZAÇÕES INCERTAS (palavra unida não vista em outro lugar do livro — confira):
+HIFENS DE FIM DE LINHA INCERTOS (decisão sem confirmação no vocabulário do livro — confira):
   p.1: high-|level -> highlevel
   p.1: non-|trivial -> nontrivial
   p.2: computa-|tional -> computational
@@ -31,7 +32,7 @@ DES-HIFENIZAÇÕES INCERTAS (palavra unida não vista em outro lugar do livro �
   p.3: equiv-|alent -> equivalent
   p.3: computa-|tional -> computational
   p.3: dis-|cussion -> discussion
-  p.4: fully-|convolutional -> fullyconvolutional
+  p.4: fully-|convolutional -> manteve fully-convolutional
   p.4: de-|tailed -> detailed
   p.5: compet-|itive -> competitive
   p.6: dif-|ferences -> differences
@@ -55,7 +56,7 @@ DES-HIFENIZAÇÕES INCERTAS (palavra unida não vista em outro lugar do livro �
   p.10: it-|erative -> iterative
   p.10: con-|catenated -> concatenated
   p.11: pro-|cessed -> processed
-  p.11: pre-|trained -> pretrained
+  p.11: pre-|trained -> manteve pre-trained
   p.12: Specifi-|cally -> Specifically
   p.12: classi-|fier -> classifier
   p.12: out-|performs -> outperforms

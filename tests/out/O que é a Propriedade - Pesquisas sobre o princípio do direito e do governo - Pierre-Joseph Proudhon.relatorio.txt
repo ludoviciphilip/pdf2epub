@@ -1,0 +1,32 @@
+input: C:\Users\luisf\Documents\Alexandria\Pierre-Joseph Proudhon\O que é a Propriedade - Pesquisas sobre o princípio do direito e do governo - Pierre-Joseph Proudhon.pdf
+output: tests\out\O que é a Propriedade - Pesquisas sobre o princípio do direito e do governo - Pierre-Joseph Proudhon.epub
+seconds: 22.3
+lang: pt
+title: O que é a Propriedade?
+author: Luis Felipe Almeida Vieira
+body_font_size: 11.0
+scanned_as_image: 1
+header_footer_lines_removed: 368
+toc_pages_removed: 1
+footnotes: 108
+line_end_hyphen_rate_%: 0.71
+dehyphenated: 1
+outline_matched: 28
+pages: 374
+chapters: 14
+paragraphs: 1639
+headings: 25
+images: 1
+
+AVISOS:
+  1 página(s) escaneada(s) incluída(s) como imagem — instale o Tesseract e use --ocr para extrair texto.
+
+HIFENS DE FIM DE LINHA INCERTOS (decisão sem confirmação no vocabulário do livro — confira):
+  p.11: Franche-|Comté -> manteve Franche-Comté
+  p.114: saint-|simoniano -> manteve saint-simoniano
+  p.122: mestre-|escola -> manteve mestre-escola
+  p.130: lugar-|comum -> manteve lugar-comum
+  p.204: todo-|poderosos -> manteve todo-poderosos
+  p.267: para-|lamas -> manteve para-lamas
+  p.268: mestre-|contrabandista -> manteve mestre-contrabandista
+  p.335: bem-|aventurados -> manteve bem-aventurados

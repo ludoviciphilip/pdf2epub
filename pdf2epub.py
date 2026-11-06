@@ -26,6 +26,8 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import difflib
+import unicodedata
 import hashlib
 import io
 import html
@@ -68,7 +70,7 @@ INVALID_XML = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\ufffe\uffff]")
 INVISIBLE = re.compile(r"[\u200b\u200c\u200d\u2060\ufeff]")
 
 COMPOUND_SUFFIX = {
-    "pt": {"lo", "la", "los", "las", "no", "na", "nos", "nas", "me", "te", "se", "lhe", "lhes", "vos", "o", "a",
+    "pt": {"lhas", "lhos", "lha", "lho", "mos", "vos", "nas", "lo", "la", "los", "las", "no", "na", "nos", "nas", "me", "te", "se", "lhe", "lhes", "vos", "o", "a",
            "os", "as", "mo", "ma", "to", "ta", "lho", "lha", "á", "ão", "ás", "ia", "iam", "emos", "ei", "ás"},
     "es": set(),
     "fr": {"t", "il", "ils", "elle", "elles", "on", "je", "tu", "nous", "vous", "moi", "toi", "ce", "là", "ci",
@@ -166,10 +168,13 @@ class Ctx:
         self.notes: dict[str, dict] = {}         # uid -> {"runs":[], "page":p, "marker":m}
         self.note_seq = 0
         self.vocab: Counter = Counter()
+        self.parts: Counter = Counter()
         self.uncertain_joins: list[str] = []
         self.warnings: list[str] = []
         self.stats = Counter()
         self.lang = "en"
+        self.hyph_rate = 0.0
+        self.auto_hyphenated = True
 
 
 def log(msg):
@@ -513,15 +518,19 @@ def extract_footnotes(pages, body, ctx):
         for l, b in cand:
             m = marker(l)
             if m is not None and l.x0 <= left + body * 2.5:
+                if cur is None and getattr(ctx.opts, "debug", False):
+                    print(f"   [debug] p.{pg.pno+1}: notas começam em {l.text[:60]!r}")
                 ctx.note_seq += 1
                 uid = f"fn{ctx.note_seq}"
                 runs = strip_marker(l.runs, m)
                 cur = {"runs": runs, "page": pg.pno, "marker": m, "uid": uid, "ref": False}
                 ctx.notes[uid] = cur
                 pg.notes.append((m, uid))
-            else:
+            elif cur is not None:
                 cur["runs"].append(Run(" "))
                 cur["runs"].extend(l.runs)
+            else:
+                continue                      # ainda não há nota aberta: a linha fica no corpo
             b.lines.remove(l)
         last_note = cur
         pg.blocks = [b for b in pg.blocks if b.kind != "text" or b.lines]
@@ -668,11 +677,23 @@ def assign_column_margins(pg, body):
 
 def build_vocab(pages, ctx):
     tok = re.compile(r"\w[\w’'-]*\w|\w")
+    n_lines = n_hyph = 0
     for pg, b, lines in all_lines(pages):
         for l in lines:
+            n_lines += 1
+            if re.search(r"[^\W\d][-\u2010\u00ad]\s*$", l.text):
+                n_hyph += 1
             ws = tok.findall(l.text)
             for w in ws[1:-1]:
                 ctx.vocab[w.lower()] += 1
+                if "-" in w:
+                    for part in w.lower().split("-"):
+                        ctx.parts[part] += 1
+    ctx.hyph_rate = n_hyph / max(1, n_lines)
+    # < 1% das linhas terminando em hífen => documento SEM hifenização automática (ex.: Word):
+    # hífen de fim de linha é de palavra composta e deve ser mantido
+    ctx.auto_hyphenated = ctx.hyph_rate >= 0.01
+    ctx.stats["line_end_hyphen_rate_%"] = round(100 * ctx.hyph_rate, 2)
 
 
 def detect_lang(pages):
@@ -902,8 +923,13 @@ class Builder:
             joined, hyph = (lw + rw).lower(), (lw + "-" + rw).lower()
             v = self.ctx.vocab
             suffixes = COMPOUND_SUFFIX.get(self.ctx.lang, set())
-            if rw.lower() in suffixes or v[hyph] > v[joined] or (rw[:1].isupper() and v[joined] == 0):
-                pass                                    # mantém o hífen (palavra composta / ênclise)
+            parts = self.ctx.parts
+            both_words = (len(lw) >= 2 and len(rw) >= 2 and (v[lw.lower()] or parts[lw.lower()])
+                          and (v[rw.lower()] or parts[rw.lower()]))
+            if (rw.lower() in suffixes or v[hyph] > v[joined] or (rw[:1].isupper() and v[joined] == 0)
+                    or (v[joined] == 0 and both_words) or (v[joined] == 0 and not self.ctx.auto_hyphenated)):
+                if v[joined] == 0 and v[hyph] == 0 and rw.lower() not in suffixes:
+                    self.ctx.uncertain_joins.append(f"p.{l.page+1}: {lw}-|{rw} -> manteve {lw}-{rw}")
             else:
                 runs[-1].text = prev_t[:-1]
                 if v[joined] == 0:
@@ -1010,6 +1036,127 @@ def classify_block(p, body):
             p.cls = "center"
         elif rm < 0.5 * size and lm > 0.3 * width:
             p.cls = "right"
+
+
+def _norm_title(s):
+    s = unicodedata.normalize("NFKD", s.lower())
+    s = "".join(ch for ch in s if not unicodedata.combining(ch))
+    return re.sub(r"[^a-z0-9]+", "", s)
+
+
+def _split_runs(runs, nchars_norm):
+    """Divide runs após consumir `nchars_norm` caracteres alfanuméricos (normalizados)."""
+    head, tail, count = [], [], 0
+    for r in runs:
+        if count >= nchars_norm:
+            tail.append(r)
+            continue
+        cut = None
+        for k, ch in enumerate(r.text):
+            count += len(_norm_title(ch))
+            if count >= nchars_norm:
+                cut = k + 1
+                break
+        if cut is None:
+            head.append(r)
+        else:
+            head.append(Run(r.text[:cut], r.b, r.i, r.sup, r.ref))
+            rest = r.text[cut:]
+            # leva junto pontuação final do título
+            m = re.match(r"^[\s.:;,!?»”)\]]*", rest)
+            head[-1].text += m.group(0).rstrip()
+            rest = rest[m.end():]
+            if rest:
+                tail.append(Run(rest, r.b, r.i, r.sup, r.ref))
+    return head, tail
+
+
+def apply_outline(paras, toc, ctx):
+    """Marca como título os parágrafos que correspondem às entradas do outline (na ordem), com o nível do outline."""
+    entries = [(lvl, title.strip(), pg - 1) for lvl, title, pg in toc if title.strip() and pg >= 1]
+    cursor, matched = 0, []
+    for lvl, title, pg in entries:
+        nt = _norm_title(title)
+        if not nt:
+            continue
+        hit = None
+        j = cursor
+        while j < len(paras) and paras[j].page <= pg + 1:
+            p = paras[j]
+            if p.kind in ("p", "h") and p.page >= pg - 1:
+                np_ = _norm_title(p.text)
+                if np_ == nt or (np_.startswith(nt) and len(np_) <= len(nt) * 1.15 + 3):
+                    hit = ("whole", j)
+                    break
+                if nt.startswith(np_) and len(np_) >= 4:
+                    # título partido em vários parágrafos: funde os seguintes até casar
+                    acc, k = np_, j
+                    while k + 1 < len(paras) and len(acc) < len(nt) and paras[k + 1].page <= pg + 1:
+                        k += 1
+                        acc += _norm_title(paras[k].text)
+                    if acc == nt or (acc.startswith(nt) and len(acc) <= len(nt) * 1.15 + 3):
+                        hit = ("multi", j, k)
+                        break
+                if np_.startswith(nt) and len(np_) > len(nt) * 1.15 + 3 and len(nt) >= 6:
+                    hit = ("prefix", j)          # título grudado no início de um parágrafo
+                    break
+                if 0.6 * len(nt) <= len(np_) <= 1.4 * len(nt) and \
+                        difflib.SequenceMatcher(None, np_, nt).ratio() >= 0.88:
+                    hit = ("whole", j)
+                    break
+            j += 1
+        if hit is None:
+            ctx.stats["outline_unmatched"] += 1
+            continue
+        if hit[0] == "multi":
+            _, a, b = hit
+            first = paras[a]
+            for q in paras[a + 1:b + 1]:
+                first.runs = first.runs + [Run(" ")] + q.runs
+                first.lines = first.lines + q.lines
+            del paras[a + 1:b + 1]
+            idx = a
+        elif hit[0] == "prefix":
+            idx = hit[1]
+            p = paras[idx]
+            head, tail = _split_runs(p.runs, len(nt))
+            body_p = Para("p", runs=tail, lines=p.lines, page=p.page, cls=p.cls)
+            p.runs, p.cls = head, ""
+            paras.insert(idx + 1, body_p)
+        else:
+            idx = hit[1]
+        p = paras[idx]
+        p.kind, p.level, p.cls = "h", min(lvl, 4), ""
+        p.title = ""
+        p.from_outline = True
+        for r in p.runs:
+            r.b = False
+        matched.append((idx, lvl, title))
+        cursor = idx + 1
+    ctx.stats["outline_matched"] = len(matched)
+    # "Capítulo II" + subtítulo como entrada seguinte na mesma página -> um só título
+    out, skip = [], set()
+    pos = {id(paras[i]): n for n, (i, _, _) in enumerate(matched)}
+    for i, p in enumerate(paras):
+        if i in skip:
+            continue
+        if getattr(p, "from_outline", False) and CHAPTER_RE.match(p.text.strip()) and \
+                not CHAPTER_RE.match(p.text.strip()).group(3).strip():
+            n = i + 1
+            while n < len(paras) and not paras[n].text.strip():
+                n += 1
+            q = paras[n] if n < len(paras) else None
+            if q is not None and getattr(q, "from_outline", False) and q.page == p.page and q.level >= p.level:
+                p.runs = p.runs + [Run("\n")] + [Run(r.text, False, r.i, r.sup, r.ref) for r in q.runs]
+                p.has_sub = True
+                skip.add(n)
+        out.append(p)
+    # títulos que NÃO estão no outline não podem disputar o nível dos capítulos
+    deepest = max((p.level for p in out if getattr(p, "from_outline", False)), default=1)
+    for p in out:
+        if p.kind == "h" and not getattr(p, "from_outline", False) and p.page > (out[0].page if out else 0) + 1:
+            p.level = min(4, max(p.level, deepest + 1)) if p.level <= deepest else p.level
+    return out
 
 
 # --------------------------------------------------------------------------- HTML
@@ -1335,6 +1482,9 @@ def convert_native(pdf: Path, out: Path, opts) -> dict:
     maxlvl = max((p.level for p in paras if p.kind == "h"), default=1)
     paras = post_process(paras, ctx, body, maxlvl)
 
+    # marcadores (bookmarks) do PDF = estrutura autoritativa, quando existem
+    if toc and len(toc) >= 3 and not getattr(opts, "ignore_outline", False):
+        paras = apply_outline(paras, toc, ctx)
     # sem títulos detectados? usa os marcadores (outline) do PDF
     if not any(p.kind == "h" for p in paras) and toc:
         first_by_page = {}
@@ -1402,7 +1552,7 @@ def convert_native(pdf: Path, out: Path, opts) -> dict:
                 title = p.title or re.sub(r"\s+", " ", re.sub(r"(\s*\n\s*)+", " — ", p.text.strip())).strip()
                 if id(p) in title_block and nav_entries:
                     continue
-                if p.level <= 3 and title:
+                if (p.level <= 3 or (p.level == 4 and getattr(p, "from_outline", False))) and title:
                     nav_entries.append((p.level, title[:200], f"text/{fname}#{p.anchor}"))
     rendered = []
     all_used = set()
@@ -1466,7 +1616,7 @@ def convert(pdf: Path, outdir: Path | None, opts) -> dict:
         rp = out.with_suffix(".relatorio.txt")
         lines = [f"{k}: {v}" for k, v in rep.items() if k not in ("warnings", "uncertain_dehyphenations")]
         lines += ["", "AVISOS:"] + [f"  {w}" for w in rep["warnings"]]
-        lines += ["", "DES-HIFENIZAÇÕES INCERTAS (palavra unida não vista em outro lugar do livro — confira):"]
+        lines += ["", "HIFENS DE FIM DE LINHA INCERTOS (decisão sem confirmação no vocabulário do livro — confira):"]
         lines += [f"  {u}" for u in rep["uncertain_dehyphenations"]]
         rp.write_text("\n".join(lines), encoding="utf-8")
     summary = {k: rep[k] for k in ("pages", "chapters", "paragraphs", "headings", "footnotes", "images", "seconds") if k in rep}
@@ -1523,11 +1673,13 @@ def main(argv=None):
     ap.add_argument("--pages", help="intervalo de páginas, ex.: 1-50,60")
     ap.add_argument("--ocr", action="store_true", help="OCR em páginas escaneadas (requer Tesseract)")
     ap.add_argument("--ocr-lang", default="por+eng")
+    ap.add_argument("--ignore-outline", action="store_true", help="não usar os marcadores do PDF como estrutura")
     ap.add_argument("--keep-toc", action="store_true", help="não remover páginas de sumário do PDF")
     ap.add_argument("--no-tables", dest="tables", action="store_false")
     ap.add_argument("--no-figures", dest="figures", action="store_false")
     ap.add_argument("--hf-zone", type=float, default=0.12, help="faixa (fração da altura) onde procurar cabeçalho/rodapé")
     ap.add_argument("--password")
+    ap.add_argument("--debug", action="store_true", help="mostra o traceback completo em caso de erro")
     ap.add_argument("--report", action="store_true", help="grava <livro>.relatorio.txt com estatísticas e pontos a conferir")
     opts = ap.parse_args(argv)
     outdir = Path(opts.outdir) if opts.outdir else None
@@ -1543,7 +1695,10 @@ def main(argv=None):
             convert(pdf, outdir, opts)
         except Exception as e:
             fails += 1
-            log(f"   ERRO em {pdf.name}: {e}")
+            log(f"   ERRO em {pdf.name}: {type(e).__name__}: {e}")
+            if opts.debug:
+                import traceback
+                traceback.print_exc()
     sys.exit(1 if fails else 0)
 
 

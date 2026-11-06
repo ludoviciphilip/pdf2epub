@@ -8,13 +8,15 @@ body_font_size: 10.5
 header_footer_lines_removed: 12
 toc_pages_removed: 1
 footnotes: 2
+line_end_hyphen_rate_%: 21.77
 dehyphenated: 25
+outline_matched: 3
 pages: 7
-chapters: 5
+chapters: 3
 paragraphs: 22
 headings: 5
 images: 1
 
 AVISOS:
 
-DES-HIFENIZAÇÕES INCERTAS (palavra unida não vista em outro lugar do livro — confira):
+HIFENS DE FIM DE LINHA INCERTOS (decisão sem confirmação no vocabulário do livro — confira):
